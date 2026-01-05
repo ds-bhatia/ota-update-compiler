@@ -1,2 +1,4 @@
 # ota-update-compiler
-A compiler used to detect insecure OTA update code. 
+Compiler used to detect insecure OTA update code. 
+
+Capstone project for Compiler Design (CS1202).
