@@ -10,14 +10,14 @@ target triple = "x86_64-pc-linux-gnu"
 @__const.main.pkg = private unnamed_addr constant %struct.UpdatePkg { i32 6 }, align 4
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32 @verify_signature(%struct.UpdatePkg* noundef %0) #0 {
+define dso_local i32 @verifySignature(%struct.UpdatePkg* noundef %0) #0 {
   %2 = alloca %struct.UpdatePkg*, align 8
   store %struct.UpdatePkg* %0, %struct.UpdatePkg** %2, align 8
   ret i32 1
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32 @source_is_trusted(%struct.UpdatePkg* noundef %0) #0 {
+define dso_local i32 @sourceTrusted(%struct.UpdatePkg* noundef %0) #0 {
   %2 = alloca %struct.UpdatePkg*, align 8
   store %struct.UpdatePkg* %0, %struct.UpdatePkg** %2, align 8
   ret i32 1
@@ -41,7 +41,7 @@ define dso_local void @updateFirmware(%struct.UpdatePkg* noundef %0) #0 {
   %2 = alloca %struct.UpdatePkg*, align 8
   store %struct.UpdatePkg* %0, %struct.UpdatePkg** %2, align 8
   %3 = load %struct.UpdatePkg*, %struct.UpdatePkg** %2, align 8
-  %4 = call i32 @verify_signature(%struct.UpdatePkg* noundef %3)
+  %4 = call i32 @verifySignature(%struct.UpdatePkg* noundef %3)
   %5 = icmp ne i32 %4, 0
   br i1 %5, label %6, label %18
 
@@ -55,7 +55,7 @@ define dso_local void @updateFirmware(%struct.UpdatePkg* noundef %0) #0 {
 
 12:                                               ; preds = %6
   %13 = load %struct.UpdatePkg*, %struct.UpdatePkg** %2, align 8
-  %14 = call i32 @source_is_trusted(%struct.UpdatePkg* noundef %13)
+  %14 = call i32 @sourceTrusted(%struct.UpdatePkg* noundef %13)
   %15 = icmp ne i32 %14, 0
   br i1 %15, label %16, label %18
 

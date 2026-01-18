@@ -6,11 +6,11 @@ typedef struct {
 
 int current_version = 5;
 
-int verify_signature(UpdatePkg *pkg) {
+int verifySignature(UpdatePkg *pkg) {
     return 1;
 }
 
-int source_is_trusted(UpdatePkg *pkg) {
+int sourceTrusted(UpdatePkg *pkg) {
     return 1;
 }
 
@@ -19,9 +19,9 @@ void install(UpdatePkg *pkg) {
 }
 
 void updateFirmware(UpdatePkg *pkg) {
-    if (verify_signature(pkg) &&
+    if (verifySignature(pkg) &&
         pkg->version > current_version &&
-        source_is_trusted(pkg)) {
+        sourceTrusted(pkg)) {
         install(pkg);
     }
 }
