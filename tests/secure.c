@@ -41,3 +41,5 @@ int main() {
     return 0;
 }
 
+// clang-14 -S -emit-llvm tests/secure.c -o tests/secure.ll
+

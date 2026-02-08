@@ -7,6 +7,10 @@ target triple = "x86_64-pc-linux-gnu"
 
 @current_version = dso_local global i32 5, align 4
 @.str = private unnamed_addr constant [33 x i8] c"Installing firmware version: %d\0A\00", align 1
+@.str.1 = private unnamed_addr constant [42 x i8] c"[LOG] Update rejected: invalid signature\0A\00", align 1
+@.str.2 = private unnamed_addr constant [42 x i8] c"[LOG] Update rejected: rollback detected\0A\00", align 1
+@.str.3 = private unnamed_addr constant [41 x i8] c"[LOG] Update rejected: untrusted source\0A\00", align 1
+@.str.4 = private unnamed_addr constant [23 x i8] c"[LOG] Update accepted\0A\00", align 1
 @__const.main.pkg = private unnamed_addr constant %struct.UpdatePkg { i32 6 }, align 4
 
 ; Function Attrs: noinline nounwind optnone uwtable
@@ -43,28 +47,41 @@ define dso_local void @updateFirmware(%struct.UpdatePkg* noundef %0) #0 {
   %3 = load %struct.UpdatePkg*, %struct.UpdatePkg** %2, align 8
   %4 = call i32 @verifySignature(%struct.UpdatePkg* noundef %3)
   %5 = icmp ne i32 %4, 0
-  br i1 %5, label %6, label %18
+  br i1 %5, label %8, label %6
 
 6:                                                ; preds = %1
-  %7 = load %struct.UpdatePkg*, %struct.UpdatePkg** %2, align 8
-  %8 = getelementptr inbounds %struct.UpdatePkg, %struct.UpdatePkg* %7, i32 0, i32 0
-  %9 = load i32, i32* %8, align 4
-  %10 = load i32, i32* @current_version, align 4
-  %11 = icmp sgt i32 %9, %10
-  br i1 %11, label %12, label %18
+  %7 = call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([42 x i8], [42 x i8]* @.str.1, i64 0, i64 0))
+  br label %25
 
-12:                                               ; preds = %6
-  %13 = load %struct.UpdatePkg*, %struct.UpdatePkg** %2, align 8
-  %14 = call i32 @sourceTrusted(%struct.UpdatePkg* noundef %13)
-  %15 = icmp ne i32 %14, 0
-  br i1 %15, label %16, label %18
+8:                                                ; preds = %1
+  %9 = load %struct.UpdatePkg*, %struct.UpdatePkg** %2, align 8
+  %10 = getelementptr inbounds %struct.UpdatePkg, %struct.UpdatePkg* %9, i32 0, i32 0
+  %11 = load i32, i32* %10, align 4
+  %12 = load i32, i32* @current_version, align 4
+  %13 = icmp sle i32 %11, %12
+  br i1 %13, label %14, label %16
 
-16:                                               ; preds = %12
+14:                                               ; preds = %8
+  %15 = call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([42 x i8], [42 x i8]* @.str.2, i64 0, i64 0))
+  br label %25
+
+16:                                               ; preds = %8
   %17 = load %struct.UpdatePkg*, %struct.UpdatePkg** %2, align 8
-  call void @install(%struct.UpdatePkg* noundef %17)
-  br label %18
+  %18 = call i32 @sourceTrusted(%struct.UpdatePkg* noundef %17)
+  %19 = icmp ne i32 %18, 0
+  br i1 %19, label %22, label %20
 
-18:                                               ; preds = %16, %12, %6, %1
+20:                                               ; preds = %16
+  %21 = call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([41 x i8], [41 x i8]* @.str.3, i64 0, i64 0))
+  br label %25
+
+22:                                               ; preds = %16
+  %23 = call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([23 x i8], [23 x i8]* @.str.4, i64 0, i64 0))
+  %24 = load %struct.UpdatePkg*, %struct.UpdatePkg** %2, align 8
+  call void @install(%struct.UpdatePkg* noundef %24)
+  br label %25
+
+25:                                               ; preds = %22, %20, %14, %6
   ret void
 }
 
