@@ -19,11 +19,20 @@ void install(UpdatePkg *pkg) {
 }
 
 void updateFirmware(UpdatePkg *pkg) {
-    if (verifySignature(pkg) &&
-        pkg->version > current_version &&
-        sourceTrusted(pkg)) {
-        install(pkg);
+    if (!verifySignature(pkg)) {
+        printf("[LOG] Update rejected: invalid signature\n");
+        return;
     }
+    if (pkg->version <= current_version) {
+        printf("[LOG] Update rejected: rollback detected\n");
+        return;
+    }
+    if (!sourceTrusted(pkg)) {
+        printf("[LOG] Update rejected: untrusted source\n");
+        return;
+    }
+    printf("[LOG] Update accepted\n");
+    install(pkg);
 }
 
 int main() {
