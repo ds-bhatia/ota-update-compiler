@@ -11,6 +11,8 @@ namespace {
 
 struct TraversalPass : public PassInfoMixin<TraversalPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
+  errs() << "=== TraversalPass RUNNING ===\n";
+
   errs() << "[TraversalPass] Visiting function: " << F.getName() << "\n";
 
 

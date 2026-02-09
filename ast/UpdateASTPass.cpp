@@ -19,20 +19,28 @@ public:
     if (FD->getNameAsString() == "updateFirmware") {
       llvm::errs() << "[AST] Found updateFirmware()\n";
 
-      for (auto *Stmt : FD->getBody()->children()) {
-        Stmt->dump(); // optional debug
+      //for (auto *Stmt : FD->getBody()->children()) {
+        //Stmt->dump(); // optional debug
+      //}
+    }
+    return true;
+  }
+
+   bool VisitCallExpr(CallExpr *CE) {
+    if (FunctionDecl *Callee = CE->getDirectCallee()) {
+      std::string name = Callee->getNameAsString();
+
+      if (name == "verifySignature" ||
+          name == "sourceTrusted" ||
+          name == "install" ||
+          name == "updateFirmware") {
+        llvm::errs() << "[AST] Security-relevant call: "
+                     << name << "\n";
       }
     }
     return true;
   }
 
-  bool VisitCallExpr(CallExpr *CE) {
-    if (FunctionDecl *Callee = CE->getDirectCallee()) {
-      llvm::errs() << "  [AST] Function call: "
-                   << Callee->getNameAsString() << "\n";
-    }
-    return true;
-  }
 
 private:
   ASTContext *Context;
