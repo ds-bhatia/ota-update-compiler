@@ -1,6 +1,0 @@
-/home/vboxuser/Documents/CDLab/ota-update-compiler/build/CMakeFiles/intrinsics_gen.dir
-/home/vboxuser/Documents/CDLab/ota-update-compiler/build/CMakeFiles/omp_gen.dir
-/home/vboxuser/Documents/CDLab/ota-update-compiler/build/CMakeFiles/acc_gen.dir
-/home/vboxuser/Documents/CDLab/ota-update-compiler/build/CMakeFiles/TraversalPass.dir
-/home/vboxuser/Documents/CDLab/ota-update-compiler/build/CMakeFiles/edit_cache.dir
-/home/vboxuser/Documents/CDLab/ota-update-compiler/build/CMakeFiles/rebuild_cache.dir
