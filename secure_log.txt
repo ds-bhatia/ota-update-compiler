@@ -1,0 +1,11 @@
+===== Analyzing Function: updateFirmware =====
+BasicBlock: 
+  -> 
+  -> 
+BasicBlock: 
+  -> 
+BasicBlock: 
+  -> 
+BasicBlock: 
+===== End Analysis =====
+
