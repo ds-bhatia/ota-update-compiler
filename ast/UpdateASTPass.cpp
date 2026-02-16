@@ -18,10 +18,6 @@ public:
 
     if (FD->getNameAsString() == "updateFirmware") {
       llvm::errs() << "[AST] Found updateFirmware()\n";
-
-      //for (auto *Stmt : FD->getBody()->children()) {
-        //Stmt->dump(); // optional debug
-      //}
     }
     return true;
   }
