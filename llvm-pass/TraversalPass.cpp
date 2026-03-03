@@ -15,15 +15,11 @@ class TraversalPass : public PassInfoMixin<TraversalPass> {
 public:
     PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
 
-        // Only analyze updateFirmware
         if (F.getName() != "updateFirmware")
             return PreservedAnalyses::all();
 
         errs() << "===== Analyzing Function: " << F.getName() << " =====\n";
 
-        // ---------------------------
-        // 1️⃣ Print CFG Structure
-        // ---------------------------
         for (auto &BB : F) {
             errs() << "BasicBlock: " << BB.getName() << "\n";
 
@@ -31,10 +27,6 @@ public:
                 errs() << "  -> " << Succ->getName() << "\n";
             }
         }
-
-        // ---------------------------
-        // 2️⃣ Find install() block
-        // ---------------------------
         BasicBlock *InstallBlock = nullptr;
 
         for (auto &BB : F) {
@@ -51,9 +43,7 @@ public:
             }
         }
 
-        // ---------------------------
-        // 3️⃣ Dominator Analysis
-        // ---------------------------
+
         if (InstallBlock) {
             DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
 
@@ -72,9 +62,8 @@ public:
     }
 };
 
-} // namespace
+} 
 
-// Register Pass
 extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
 llvmGetPassPluginInfo() {
     return {

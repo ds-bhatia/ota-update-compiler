@@ -68,7 +68,7 @@ protected:
   }
 };
 
-} // namespace
+}
 
 static FrontendPluginRegistry::Add<UpdateASTAction>
 X("update-ast", "Detect firmware update logic");
