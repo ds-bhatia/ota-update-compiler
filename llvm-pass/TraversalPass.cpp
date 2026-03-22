@@ -219,10 +219,8 @@ static bool hasRollbackGuardBeforeInstall(Function &F, DominatorTree &DT,
 
             ICmpInst::Predicate Pred = Cmp->getPredicate();
 
-            if ((Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_UGT) &&
-                PkgL && CurR) {
-                User *SingleUser = Cmp->hasOneUse() ? *Cmp->user_begin() : nullptr;
-                auto *Br = dyn_cast_or_null<BranchInst>(SingleUser);
+            for (User *U : Cmp->users()) {
+                auto *Br = dyn_cast<BranchInst>(U);
                 if (!Br || !Br->isConditional() || Br->getCondition() != Cmp) {
                     continue;
                 }
@@ -232,26 +230,32 @@ static bool hasRollbackGuardBeforeInstall(Function &F, DominatorTree &DT,
                 bool TrueReachesInstall = blockReachesTarget(TrueSucc, InstallBB);
                 bool FalseReachesInstall = blockReachesTarget(FalseSucc, InstallBB);
 
-                if (TrueReachesInstall && !FalseReachesInstall) {
-                    return true;
+                if (PkgL && CurR) {
+                    bool DirectStrictGT =
+                        (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_UGT) &&
+                        TrueReachesInstall && !FalseReachesInstall;
+
+                    bool RejectLEThenInstall =
+                        (Pred == ICmpInst::ICMP_SLE || Pred == ICmpInst::ICMP_ULE) &&
+                        FalseReachesInstall && !TrueReachesInstall;
+
+                    if (DirectStrictGT || RejectLEThenInstall) {
+                        return true;
+                    }
                 }
-            }
 
-            if ((Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_ULT) &&
-                CurL && PkgR) {
-                User *SingleUser = Cmp->hasOneUse() ? *Cmp->user_begin() : nullptr;
-                auto *Br = dyn_cast_or_null<BranchInst>(SingleUser);
-                if (!Br || !Br->isConditional() || Br->getCondition() != Cmp) {
-                    continue;
-                }
+                if (CurL && PkgR) {
+                    bool DirectStrictGT =
+                        (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_ULT) &&
+                        TrueReachesInstall && !FalseReachesInstall;
 
-                BasicBlock *TrueSucc = Br->getSuccessor(0);
-                BasicBlock *FalseSucc = Br->getSuccessor(1);
-                bool TrueReachesInstall = blockReachesTarget(TrueSucc, InstallBB);
-                bool FalseReachesInstall = blockReachesTarget(FalseSucc, InstallBB);
+                    bool RejectGEThenInstall =
+                        (Pred == ICmpInst::ICMP_SGE || Pred == ICmpInst::ICMP_UGE) &&
+                        FalseReachesInstall && !TrueReachesInstall;
 
-                if (TrueReachesInstall && !FalseReachesInstall) {
-                    return true;
+                    if (DirectStrictGT || RejectGEThenInstall) {
+                        return true;
+                    }
                 }
             }
         }
