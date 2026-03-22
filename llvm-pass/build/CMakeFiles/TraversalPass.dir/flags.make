@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = -DTraversalPass_EXPORTS
 
-CXX_INCLUDES = -I/usr/lib/llvm-14/include
+CXX_INCLUDES = -I/usr/lib/llvm-18/include
 
 CXX_FLAGS = -fPIC -fno-rtti
 

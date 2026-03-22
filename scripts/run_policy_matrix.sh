@@ -102,7 +102,7 @@ for cfile in "${TEST_FILES[@]}"; do
 
   total=$((total + 1))
 
-  if ! "$CLANG_EXE" -S -emit-llvm "$cfile" -o "$llfile" >/dev/null 2>&1; then
+  if ! "$CLANG_EXE" -S -emit-llvm -Xclang -disable-O0-optnone "$cfile" -o "$llfile" >/dev/null 2>&1; then
     echo "[FAIL] $(basename "$cfile"): clang failed"
     failures=$((failures + 1))
     continue

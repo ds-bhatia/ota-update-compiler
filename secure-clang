@@ -128,7 +128,7 @@ for src in "${SOURCE_FILES[@]}"; do
     IR_ARGS+=("$a")
   done
 
-  "$CLANG_EXE" "${IR_ARGS[@]}" -S -emit-llvm "$src" -o "$tmp_ll"
+  "$CLANG_EXE" "${IR_ARGS[@]}" -S -emit-llvm -Xclang -disable-O0-optnone "$src" -o "$tmp_ll"
   "$OPT_EXE" -load-pass-plugin "$PLUGIN_RESOLVED" -passes=traversal-pass -disable-output "$tmp_ll"
 done
 

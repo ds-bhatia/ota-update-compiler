@@ -70,7 +70,7 @@ static bool blockReachesTarget(BasicBlock *Start, BasicBlock *Target) {
         return true;
     }
 
-    SmallPtrSet<BasicBlock *, 64> Visited;
+    SmallPtrSet<BasicBlock *, 32> Visited;
     std::queue<BasicBlock *> Q;
     Visited.insert(Start);
     Q.push(Start);
@@ -137,8 +137,8 @@ static bool valueDerivedFrom(Value *V, const Value *Target,
     return false;
 }
 
-static bool isPkgDerived(Value *V, Argument *PkgArg) {
-    SmallPtrSet<const Value *, 64> Visited;
+static bool isPkgDerived(Value *V, Value *PkgArg) {
+    SmallPtrSet<const Value *, 32> Visited;
     return valueDerivedFrom(V, PkgArg, Visited);
 }
 
@@ -189,13 +189,12 @@ static bool isCurrentVersionDerivedImpl(Value *V,
 }
 
 static bool isCurrentVersionDerived(Value *V) {
-    SmallPtrSet<const Value *, 64> Visited;
+    SmallPtrSet<const Value *, 32> Visited;
     return isCurrentVersionDerivedImpl(V, Visited);
 }
 
 static bool hasRollbackGuardBeforeInstall(Function &F, DominatorTree &DT,
-                                          Instruction *InstallI,
-                                          Argument *PkgArg) {
+                                          Instruction *InstallI) {
     BasicBlock *InstallBB = InstallI ? InstallI->getParent() : nullptr;
 
     for (BasicBlock &BB : F) {
@@ -212,15 +211,13 @@ static bool hasRollbackGuardBeforeInstall(Function &F, DominatorTree &DT,
             Value *LHS = Cmp->getOperand(0);
             Value *RHS = Cmp->getOperand(1);
 
-            bool PkgL = isPkgDerived(LHS, PkgArg);
             bool CurR = isCurrentVersionDerived(RHS);
             bool CurL = isCurrentVersionDerived(LHS);
-            bool PkgR = isPkgDerived(RHS, PkgArg);
 
             ICmpInst::Predicate Pred = Cmp->getPredicate();
 
             if ((Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_UGT) &&
-                PkgL && CurR) {
+                CurR) {
                 User *SingleUser = Cmp->hasOneUse() ? *Cmp->user_begin() : nullptr;
                 auto *Br = dyn_cast_or_null<BranchInst>(SingleUser);
                 if (!Br || !Br->isConditional() || Br->getCondition() != Cmp) {
@@ -238,7 +235,7 @@ static bool hasRollbackGuardBeforeInstall(Function &F, DominatorTree &DT,
             }
 
             if ((Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_ULT) &&
-                CurL && PkgR) {
+                CurL) {
                 User *SingleUser = Cmp->hasOneUse() ? *Cmp->user_begin() : nullptr;
                 auto *Br = dyn_cast_or_null<BranchInst>(SingleUser);
                 if (!Br || !Br->isConditional() || Br->getCondition() != Cmp) {
@@ -353,8 +350,7 @@ public:
                                      instructionSite(InstallCI));
             }
 
-            Argument *PkgArg = F.arg_size() > 0 ? F.getArg(0) : nullptr;
-            if (!PkgArg || !hasRollbackGuardBeforeInstall(F, DT, InstallCI, PkgArg)) {
+            if (!hasRollbackGuardBeforeInstall(F, DT, InstallCI)) {
                 Violations.push_back("Rollback guard '(new_version > current_version)' does not gate install path at " +
                                      instructionSite(InstallCI));
             }
@@ -366,7 +362,7 @@ public:
             for (const std::string &V : Violations) {
                 Message += " - " + V + "\n";
             }
-            report_fatal_error(Message);
+            report_fatal_error(StringRef(Message));
         }
 
         return PreservedAnalyses::all();
