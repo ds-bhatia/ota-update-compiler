@@ -120,6 +120,20 @@ static bool valueDerivedFrom(Value *V, const Value *Target,
         return valueDerivedFrom(Cast->getOperand(0), Target, Visited);
     }
 
+    if (auto *AI = dyn_cast<AllocaInst>(V)) {
+        // At -O0, function args are commonly stored to allocas and later reloaded.
+        for (User *U : AI->users()) {
+            auto *SI = dyn_cast<StoreInst>(U);
+            if (!SI || SI->getPointerOperand() != AI) {
+                continue;
+            }
+
+            if (valueDerivedFrom(SI->getValueOperand(), Target, Visited)) {
+                return true;
+            }
+        }
+    }
+
     if (auto *PHI = dyn_cast<PHINode>(V)) {
         for (Value *Incoming : PHI->incoming_values()) {
             if (valueDerivedFrom(Incoming, Target, Visited)) {
@@ -221,6 +235,26 @@ static bool hasRollbackGuardBeforeInstall(Function &F, DominatorTree &DT,
             bool CurR = isCurrentVersionDerived(RHS);
             bool CurL = isCurrentVersionDerived(LHS);
             bool PkgR = isPkgDerived(RHS, PkgArg);
+
+            // Fallback for common IR shapes where compare value traces to another
+            // function argument aliasing the package pointer (through allocas).
+            if (!PkgL) {
+                for (Argument &A : F.args()) {
+                    if (A.getType()->isPointerTy() && isPkgDerived(LHS, &A)) {
+                        PkgL = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!PkgR) {
+                for (Argument &A : F.args()) {
+                    if (A.getType()->isPointerTy() && isPkgDerived(RHS, &A)) {
+                        PkgR = true;
+                        break;
+                    }
+                }
+            }
 
             ICmpInst::Predicate Pred = Cmp->getPredicate();
 
