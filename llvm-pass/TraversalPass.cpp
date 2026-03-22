@@ -408,7 +408,7 @@ public:
             for (const std::string &V : Violations) {
                 Message += " - " + V + "\n";
             }
-            report_fatal_error(StringRef(Message));
+            report_fatal_error(StringRef(Message), false);
         }
 
         return PreservedAnalyses::all();
