@@ -195,7 +195,13 @@ static bool isCurrentVersionDerived(Value *V) {
 
 static bool hasRollbackGuardBeforeInstall(Function &F, DominatorTree &DT,
                                           Instruction *InstallI) {
-    BasicBlock *InstallBB = InstallI ? InstallI->getParent() : nullptr;
+    auto *InstallCall = dyn_cast<CallInst>(InstallI);
+    if (!InstallCall || InstallCall->arg_size() == 0) {
+        return false;
+    }
+
+    Value *PkgArg = InstallCall->getArgOperand(0)->stripPointerCasts();
+    BasicBlock *InstallBB = InstallI->getParent();
 
     for (BasicBlock &BB : F) {
         for (Instruction &I : BB) {
@@ -211,14 +217,13 @@ static bool hasRollbackGuardBeforeInstall(Function &F, DominatorTree &DT,
             Value *LHS = Cmp->getOperand(0);
             Value *RHS = Cmp->getOperand(1);
 
+            bool PkgL = isPkgDerived(LHS, PkgArg);
             bool CurR = isCurrentVersionDerived(RHS);
             bool CurL = isCurrentVersionDerived(LHS);
+            bool PkgR = isPkgDerived(RHS, PkgArg);
 
             ICmpInst::Predicate Pred = Cmp->getPredicate();
-            if ((Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_UGT) &&
-                CurR) {
-                User *SingleUser = Cmp->hasOneUse() ? *Cmp->user_begin() : nullptr;
-                auto *Br = dyn_cast_or_null<BranchInst>(SingleUser);
+
             for (User *U : Cmp->users()) {
                 auto *Br = dyn_cast<BranchInst>(U);
                 if (!Br || !Br->isConditional() || Br->getCondition() != Cmp) {
@@ -235,12 +240,6 @@ static bool hasRollbackGuardBeforeInstall(Function &F, DominatorTree &DT,
                         (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_UGT) &&
                         TrueReachesInstall && !FalseReachesInstall;
 
-            if ((Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_ULT) &&
-                CurL) {
-                User *SingleUser = Cmp->hasOneUse() ? *Cmp->user_begin() : nullptr;
-                auto *Br = dyn_cast_or_null<BranchInst>(SingleUser);
-                if (!Br || !Br->isConditional() || Br->getCondition() != Cmp) {
-                    continue;
                     bool RejectLEThenInstall =
                         (Pred == ICmpInst::ICMP_SLE || Pred == ICmpInst::ICMP_ULE) &&
                         FalseReachesInstall && !TrueReachesInstall;
