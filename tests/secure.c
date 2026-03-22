@@ -1,45 +1,108 @@
+#include <stdint.h>
 #include <stdio.h>
+#include <string.h>
+
+#define URL_MAX 128
+#define HASH_LEN 32
+
+typedef enum {
+    OTA_OK = 0,
+    OTA_ERR_SIGNATURE,
+    OTA_ERR_SOURCE,
+    OTA_ERR_ROLLBACK,
+    OTA_ERR_IMAGE
+} OtaStatus;
 
 typedef struct {
     int version;
-} UpdatePkg;
+    char channel[16];
+    char source_url[URL_MAX];
+    uint8_t image_hash[HASH_LEN];
+    uint8_t signature[64];
+    uint8_t image[512];
+    uint32_t image_size;
+} FirmwarePackage;
+
+typedef struct {
+    int current_version;
+    int boot_slot;
+    int pending_slot;
+    char active_channel[16];
+} DeviceState;
 
 int current_version = 5;
 
-int verifySignature(UpdatePkg *pkg) {
+static int startsWith(const char *s, const char *prefix) {
+    return strncmp(s, prefix, strlen(prefix)) == 0;
+}
+
+int verifySignature(FirmwarePackage *pkg) {
+    (void)pkg;
     return 1;
 }
 
-int sourceTrusted(UpdatePkg *pkg) {
+int sourceTrusted(FirmwarePackage *pkg) {
+    return startsWith(pkg->source_url, "https://updates.vendor.example/");
+}
+
+static int verifyImageHash(const FirmwarePackage *pkg) {
+    (void)pkg;
     return 1;
 }
 
-void install(UpdatePkg *pkg) {
-    printf("Installing firmware version: %d\n", pkg->version);
+void install(FirmwarePackage *pkg) {
+    (void)pkg;
 }
 
-void updateFirmware(UpdatePkg *pkg) {
+OtaStatus updateFirmware(DeviceState *dev, FirmwarePackage *pkg) {
     if (!verifySignature(pkg)) {
-        printf("[LOG] Update rejected: invalid signature\n");
-        return;
+        return OTA_ERR_SIGNATURE;
     }
-    if (pkg->version <= current_version) {
-        printf("[LOG] Update rejected: rollback detected\n");
-        return;
-    }
+
     if (!sourceTrusted(pkg)) {
-        printf("[LOG] Update rejected: untrusted source\n");
+        return OTA_ERR_SOURCE;
+    }
+
+    if (pkg->version <= current_version) {
+        return OTA_ERR_ROLLBACK;
+    }
+
+    if (!verifyImageHash(pkg)) {
+        return OTA_ERR_IMAGE;
+    }
+
+    install(pkg);
+    dev->current_version = pkg->version;
+    dev->pending_slot = dev->boot_slot ^ 1;
+    return OTA_OK;
+}
+
+static void printResult(OtaStatus st) {
+    if (st == OTA_OK) {
+        printf("OTA completed successfully\n");
         return;
     }
-    printf("[LOG] Update accepted\n");
-    install(pkg);
+
+    printf("OTA failed with status code: %d\n", st);
 }
 
-int main() {
-    UpdatePkg pkg = { .version = 6 };
-    updateFirmware(&pkg);
-    return 0;
-}
+int main(void) {
+    DeviceState device = {
+        .current_version = 5,
+        .boot_slot = 0,
+        .pending_slot = 1,
+        .active_channel = "stable"
+    };
 
-// clang-14 -S -emit-llvm tests/secure.c -o tests/secure.ll
+    FirmwarePackage pkg = {
+        .version = 6,
+        .channel = "stable",
+        .source_url = "https://updates.vendor.example/firmware/v6.bin",
+        .image_size = 512
+    };
+
+    OtaStatus st = updateFirmware(&device, &pkg);
+    printResult(st);
+    return st == OTA_OK ? 0 : 1;
+}
 
