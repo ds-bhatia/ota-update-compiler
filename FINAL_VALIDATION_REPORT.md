@@ -50,15 +50,15 @@ Legend:
 
 Build plugin:
 
-```powershell
+```bash
 cmake -S llvm-pass -B llvm-pass/build
-cmake --build llvm-pass/build --config Release
+cmake --build llvm-pass/build
 ```
 
 Run matrix:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/run_policy_matrix.ps1
+```bash
+./scripts/run_policy_matrix.sh
 ```
 
 ## Actual Results

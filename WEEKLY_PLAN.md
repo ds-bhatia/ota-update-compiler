@@ -53,7 +53,7 @@ Added files:
 Implemented in this week:
 
 - README expanded with prerequisites, build commands, single-file run flow, and one-command matrix run.
-- Added scripts/run_policy_matrix.ps1 for automated secure/insecure expectation checks.
+- Added scripts/run_policy_matrix.sh for automated secure/insecure expectation checks on Linux.
 
 ## Week 6 - Final Validation and Report (In Progress)
 

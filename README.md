@@ -23,6 +23,7 @@ Inside updateFirmware(), the pass fails compilation when it detects:
 
 Install and make available on PATH:
 
+- Ubuntu 22.04+ (or compatible Linux distro)
 - CMake 3.13+
 - LLVM toolchain matching your headers/libraries
 - clang
@@ -34,31 +35,58 @@ Tip: use the same LLVM/Clang major version for building and running the pass.
 
 From repository root:
 
-```powershell
+```bash
 cmake -S llvm-pass -B llvm-pass/build
-cmake --build llvm-pass/build --config Release
+cmake --build llvm-pass/build
 ```
 
 ## Run Single File Check
 
 Example with secure sample:
 
-```powershell
+```bash
 clang -S -emit-llvm tests/secure.c -o tests/secure.ll
-opt -load-pass-plugin llvm-pass/build/TraversalPass.dll -passes=traversal-pass -disable-output tests/secure.ll
+opt -load-pass-plugin llvm-pass/build/libTraversalPass.so -passes=traversal-pass -disable-output tests/secure.ll
 ```
 
 Notes:
 
-- On Linux/macOS, plugin extension is usually .so.
-- If your build generates plugin in another location, pass the full plugin path.
+- Plugin output may be libTraversalPass.so or TraversalPass.so depending on toolchain.
+
+## secure-clang Driver
+
+The project includes a clang wrapper so usage feels like a compiler command:
+
+```bash
+./secure-clang tests/secure.c -o secure.out
+```
+
+Behavior:
+
+- Generates temporary LLVM IR for each input .c file.
+- Runs the OTA security pass through opt.
+- If policy checks pass, forwards original arguments to clang.
+- If policy checks fail, compilation is blocked.
+
+To use as a global command on Ubuntu:
+
+```bash
+chmod +x secure-clang scripts/run_policy_matrix.sh
+sudo ln -sf "$(pwd)/secure-clang" /usr/local/bin/secure-clang
+```
+
+Optional explicit tool paths:
+
+```bash
+secure-clang --clang clang --opt opt --plugin llvm-pass/build/libTraversalPass.so -- tests/secure.c -o secure.out
+```
 
 ## Run Week 3 Matrix (One Command)
 
 From repository root:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/run_policy_matrix.ps1
+```bash
+./scripts/run_policy_matrix.sh
 ```
 
 Behavior:
@@ -71,8 +99,8 @@ Behavior:
 
 Optional parameters:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/run_policy_matrix.ps1 -ClangExe clang -OptExe opt
+```bash
+./scripts/run_policy_matrix.sh --clang clang --opt opt --plugin llvm-pass/build/libTraversalPass.so
 ```
 
 ## Week Status

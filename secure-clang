@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CLANG_EXE="clang"
+OPT_EXE="opt"
+PLUGIN_PATH=""
+
+print_usage() {
+  echo "Usage: secure-clang [--clang /path/to/clang] [--opt /path/to/opt] [--plugin /path/to/libTraversalPass.so] [--] <clang args>"
+  echo "Example: secure-clang tests/secure.c -o secure.out"
+}
+
+resolve_plugin_path() {
+  local explicit="$1"
+  if [[ -n "$explicit" && -f "$explicit" ]]; then
+    echo "$explicit"
+    return 0
+  fi
+
+  local candidates=(
+    "llvm-pass/build/libTraversalPass.so"
+    "llvm-pass/build/TraversalPass.so"
+    "llvm-pass/build/Release/libTraversalPass.so"
+    "llvm-pass/build/Debug/libTraversalPass.so"
+  )
+
+  local c
+  for c in "${candidates[@]}"; do
+    if [[ -f "$c" ]]; then
+      echo "$c"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+COMPILER_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --clang)
+      CLANG_EXE="$2"
+      shift 2
+      ;;
+    --opt)
+      OPT_EXE="$2"
+      shift 2
+      ;;
+    --plugin)
+      PLUGIN_PATH="$2"
+      shift 2
+      ;;
+    --help|-h)
+      print_usage
+      exit 0
+      ;;
+    --)
+      shift
+      while [[ $# -gt 0 ]]; do
+        COMPILER_ARGS+=("$1")
+        shift
+      done
+      ;;
+    *)
+      COMPILER_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [[ ${#COMPILER_ARGS[@]} -eq 0 ]]; then
+  print_usage
+  exit 2
+fi
+
+if ! PLUGIN_RESOLVED="$(resolve_plugin_path "$PLUGIN_PATH")"; then
+  echo "secure-clang: could not find plugin. Build it first or pass --plugin." >&2
+  exit 2
+fi
+
+SOURCE_FILES=()
+for arg in "${COMPILER_ARGS[@]}"; do
+  if [[ "$arg" == *.c && -f "$arg" ]]; then
+    SOURCE_FILES+=("$arg")
+  fi
+done
+
+if [[ ${#SOURCE_FILES[@]} -eq 0 ]]; then
+  echo "secure-clang: no C source input found; forwarding to clang."
+  exec "$CLANG_EXE" "${COMPILER_ARGS[@]}"
+fi
+
+trap_cleanup() {
+  local f
+  for f in "${TMP_FILES[@]:-}"; do
+    [[ -f "$f" ]] && rm -f "$f"
+  done
+}
+
+TMP_FILES=()
+trap trap_cleanup EXIT
+
+for src in "${SOURCE_FILES[@]}"; do
+  tmp_ll="$(mktemp "/tmp/secure-clang-XXXXXX.ll")"
+  TMP_FILES+=("$tmp_ll")
+
+  IR_ARGS=()
+  skip_next=0
+  for a in "${COMPILER_ARGS[@]}"; do
+    if [[ "$skip_next" -eq 1 ]]; then
+      skip_next=0
+      continue
+    fi
+
+    if [[ "$a" == "-o" ]]; then
+      skip_next=1
+      continue
+    fi
+
+    if [[ "$a" == "-c" || "$a" == "-S" || "$a" == "-emit-llvm" ]]; then
+      continue
+    fi
+
+    if [[ "$a" == *.c ]]; then
+      continue
+    fi
+
+    IR_ARGS+=("$a")
+  done
+
+  "$CLANG_EXE" "${IR_ARGS[@]}" -S -emit-llvm "$src" -o "$tmp_ll"
+  "$OPT_EXE" -load-pass-plugin "$PLUGIN_RESOLVED" -passes=traversal-pass -disable-output "$tmp_ll"
+done
+
+exec "$CLANG_EXE" "${COMPILER_ARGS[@]}"
