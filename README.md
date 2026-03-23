@@ -103,6 +103,32 @@ Optional parameters:
 ./scripts/run_policy_matrix.sh --clang clang --opt opt --plugin llvm-pass/build/libTraversalPass.so
 ```
 
+## Web Demo Interface
+
+A browser-based demo UI is available in web-demo/ to load firmware code, run secure-clang, and visualize violations.
+
+Run it:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r web-demo/requirements.txt
+python3 web-demo/app.py
+```
+
+Then open:
+
+```text
+http://localhost:5050
+```
+
+Features:
+
+- Load any sample from tests/*.c.
+- Edit or paste your own firmware update code.
+- Run secure-clang from the UI.
+- View policy violations and line-level hints.
+
 ## Week Status
 
 - Week 1: completed (core policy enforcement)

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Secure OTA Compiler Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Compiler Security Lab</p>
+      <h1>Secure OTA Update Compiler</h1>
+      <p class="sub">Load firmware logic, run secure-clang, and inspect policy failures instantly.</p>
+    </div>
+    <div class="status-pill" id="engineStatus">Engine: ready</div>
+  </header>
+
+  <main class="layout">
+    <section class="panel editor-panel">
+      <div class="panel-header">
+        <h2>Firmware Source</h2>
+        <div class="toolbar">
+          <select id="sampleSelect"></select>
+          <button id="loadSampleBtn" class="btn secondary">Load sample</button>
+          <button id="compileBtn" class="btn primary">Run secure-clang</button>
+        </div>
+      </div>
+      <label class="filename-row">
+        File name
+        <input id="filenameInput" value="firmware_demo.c" />
+      </label>
+      <div class="editor-wrap">
+        <textarea id="codeInput" spellcheck="false"></textarea>
+      </div>
+    </section>
+
+    <section class="panel output-panel">
+      <div class="panel-header">
+        <h2>Compiler Output</h2>
+        <span id="resultBadge" class="badge idle">Idle</span>
+      </div>
+
+      <div id="messageBox" class="message neutral">Run compilation to see results.</div>
+
+      <h3>Violations</h3>
+      <ul id="violationsList" class="stack-list"></ul>
+
+      <h3>Line Hints</h3>
+      <ul id="hintsList" class="stack-list"></ul>
+
+      <h3>Raw Output</h3>
+      <pre id="rawOutput"></pre>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
