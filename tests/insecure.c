@@ -21,7 +21,7 @@ int verifySignature(FirmwarePackage *pkg) {
 }
 
 int sourceTrusted(FirmwarePackage *pkg) {
-    return strncmp(pkg->source_url, "https://updates.vendor.example/", 31) == 0;
+    return strncmp(pkg->source_url, "https://github.com/", strlen("https://github.com/")) == 0;
 }
 
 int SHA1(const uint8_t *buffer, uint32_t len) {
@@ -65,7 +65,7 @@ int updateFirmware(FirmwarePackage *pkg) {
 int main(void) {
     FirmwarePackage pkg = {
         .version = 4,
-        .source_url = "http://mirror.local/firmware/latest.bin",
+        .source_url = "http://github.com/firmware/latest.bin",
         .image_size = 512
     };
 

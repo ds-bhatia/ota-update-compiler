@@ -16,7 +16,7 @@ int verifySignature(FirmwarePackage *pkg) {
 }
 
 int sourceTrusted(FirmwarePackage *pkg) {
-    return strncmp(pkg->source_url, "https://updates.vendor.example/", 31) == 0;
+    return strncmp(pkg->source_url, "https://github.com/", strlen("https://github.com/")) == 0;
 }
 
 void install(FirmwarePackage *pkg) {
@@ -43,7 +43,7 @@ int updateFirmware(FirmwarePackage *pkg) {
 int main(void) {
     FirmwarePackage pkg = {
         .version = 2,
-        .source_url = "https://updates.vendor.example/edge/fw-v2.bin"
+        .source_url = "https://github.com/edge/fw-v2.bin"
     };
     return updateFirmware(&pkg);
 }

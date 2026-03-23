@@ -42,7 +42,7 @@ int verifySignature(FirmwarePackage *pkg) {
 }
 
 int sourceTrusted(FirmwarePackage *pkg) {
-    return startsWith(pkg->source_url, "https://updates.vendor.example/");
+    return startsWith(pkg->source_url, "https://github.com/");
 }
 
 static int verifyImageHash(const FirmwarePackage *pkg) {
@@ -97,7 +97,7 @@ int main(void) {
     FirmwarePackage pkg = {
         .version = 6,
         .channel = "stable",
-        .source_url = "https://updates.vendor.example/firmware/v6.bin",
+        .source_url = "https://github.com/firmware/v6.bin",
         .image_size = 512
     };
 

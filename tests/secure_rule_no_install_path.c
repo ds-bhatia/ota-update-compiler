@@ -14,7 +14,7 @@ int verifySignature(FirmwarePackage *pkg) {
 }
 
 int sourceTrusted(FirmwarePackage *pkg) {
-    return strncmp(pkg->source_url, "https://updates.vendor.example/", 31) == 0;
+    return strncmp(pkg->source_url, "https://github.com/", strlen("https://github.com/")) == 0;
 }
 
 int updateFirmware(FirmwarePackage *pkg) {
@@ -36,7 +36,7 @@ int updateFirmware(FirmwarePackage *pkg) {
 int main(void) {
     FirmwarePackage pkg = {
         .version = 16,
-        .source_url = "https://updates.vendor.example/no-install/fw-v16.bin"
+        .source_url = "https://github.com/no-install/fw-v16.bin"
     };
     return updateFirmware(&pkg);
 }

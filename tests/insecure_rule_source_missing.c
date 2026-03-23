@@ -38,7 +38,7 @@ int updateFirmware(FirmwarePackage *pkg) {
 int main(void) {
     FirmwarePackage pkg = {
         .version = 4,
-        .source_url = "http://mirror.local/channel/stable.bin"
+        .source_url = "http://github.com/channel/stable.bin"
     };
     return updateFirmware(&pkg);
 }

@@ -16,7 +16,7 @@ int verifySignature(FirmwarePackage *pkg) {
 }
 
 int sourceTrusted(FirmwarePackage *pkg) {
-    return strncmp(pkg->source_url, "https://updates.vendor.example/", 31) == 0;
+    return strncmp(pkg->source_url, "https://github.com/", strlen("https://github.com/")) == 0;
 }
 
 int MD5(const uint8_t *data, uint32_t size) {
@@ -53,7 +53,7 @@ int updateFirmware(FirmwarePackage *pkg) {
 int main(void) {
     FirmwarePackage pkg = {
         .version = 31,
-        .source_url = "https://updates.vendor.example/prod/fw-v31.bin",
+        .source_url = "https://github.com/prod/fw-v31.bin",
         .size = 2048
     };
     return updateFirmware(&pkg);

@@ -15,7 +15,7 @@ int checkSignature(FirmwarePackage *pkg) {
 }
 
 int validateSource(FirmwarePackage *pkg) {
-    return strncmp(pkg->source_url, "https://updates.vendor.example/", 31) == 0;
+    return strncmp(pkg->source_url, "https://github.com/", strlen("https://github.com/")) == 0;
 }
 
 void applyUpdate(FirmwarePackage *pkg) {
@@ -42,7 +42,7 @@ int updateFirmware(FirmwarePackage *pkg) {
 int main(void) {
     FirmwarePackage pkg = {
         .version = 9,
-        .source_url = "https://updates.vendor.example/alias/fw-v9.bin"
+        .source_url = "https://github.com/alias/fw-v9.bin"
     };
     return updateFirmware(&pkg);
 }
