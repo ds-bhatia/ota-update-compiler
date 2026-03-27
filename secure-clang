@@ -1,135 +1,218 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/usr/bin/env python3
+from __future__ import annotations
 
-CLANG_EXE="clang"
-OPT_EXE="opt"
-PLUGIN_PATH=""
+import argparse
+import csv
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
 
-print_usage() {
-  echo "Usage: secure-clang [--clang /path/to/clang] [--opt /path/to/opt] [--plugin /path/to/libTraversalPass.so] [--] <clang args>"
-  echo "Example: secure-clang tests/secure.c -o secure.out"
-}
 
-resolve_plugin_path() {
-  local explicit="$1"
-  if [[ -n "$explicit" && -f "$explicit" ]]; then
-    echo "$explicit"
-    return 0
-  fi
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="secure-clang",
+        description="Run secure LLVM policy checks before invoking clang.",
+        add_help=True,
+    )
+    parser.add_argument("--clang", default="clang", help="Path to clang executable")
+    parser.add_argument("--opt", default="opt", help="Path to opt executable")
+    parser.add_argument("--plugin", default="", help="Path to TraversalPass plugin .so")
+    parser.add_argument("compiler_args", nargs=argparse.REMAINDER, help="Arguments forwarded to clang")
+    ns = parser.parse_args()
 
-  local candidates=(
-    "llvm-pass/build/libTraversalPass.so"
-    "llvm-pass/build/TraversalPass.so"
-    "llvm-pass/build/Release/libTraversalPass.so"
-    "llvm-pass/build/Debug/libTraversalPass.so"
-  )
+    if ns.compiler_args and ns.compiler_args[0] == "--":
+        ns.compiler_args = ns.compiler_args[1:]
 
-  local c
-  for c in "${candidates[@]}"; do
-    if [[ -f "$c" ]]; then
-      echo "$c"
-      return 0
-    fi
-  done
+    if not ns.compiler_args:
+        parser.error("No clang arguments were provided")
 
-  return 1
-}
+    return ns
 
-COMPILER_ARGS=()
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --clang)
-      CLANG_EXE="$2"
-      shift 2
-      ;;
-    --opt)
-      OPT_EXE="$2"
-      shift 2
-      ;;
-    --plugin)
-      PLUGIN_PATH="$2"
-      shift 2
-      ;;
-    --help|-h)
-      print_usage
-      exit 0
-      ;;
-    --)
-      shift
-      while [[ $# -gt 0 ]]; do
-        COMPILER_ARGS+=("$1")
-        shift
-      done
-      ;;
-    *)
-      COMPILER_ARGS+=("$1")
-      shift
-      ;;
-  esac
-done
 
-if [[ ${#COMPILER_ARGS[@]} -eq 0 ]]; then
-  print_usage
-  exit 2
-fi
+def resolve_plugin_path(explicit: str) -> str | None:
+    if explicit and Path(explicit).is_file():
+        return explicit
 
-if ! PLUGIN_RESOLVED="$(resolve_plugin_path "$PLUGIN_PATH")"; then
-  echo "secure-clang: could not find plugin. Build it first or pass --plugin." >&2
-  exit 2
-fi
+    candidates = [
+        "llvm-pass/build/libTraversalPass.so",
+        "llvm-pass/build/TraversalPass.so",
+        "llvm-pass/build/Release/libTraversalPass.so",
+        "llvm-pass/build/Debug/libTraversalPass.so",
+    ]
+    for c in candidates:
+        if Path(c).is_file():
+            return c
+    return None
 
-SOURCE_FILES=()
-for arg in "${COMPILER_ARGS[@]}"; do
-  if [[ "$arg" == *.c && -f "$arg" ]]; then
-    SOURCE_FILES+=("$arg")
-  fi
-done
 
-if [[ ${#SOURCE_FILES[@]} -eq 0 ]]; then
-  echo "secure-clang: no C source input found; forwarding to clang."
-  exec "$CLANG_EXE" "${COMPILER_ARGS[@]}"
-fi
+def get_source_files(args: list[str]) -> list[str]:
+    files: list[str] = []
+    for a in args:
+        if a.endswith(".c") and Path(a).is_file():
+            files.append(a)
+    return files
 
-trap_cleanup() {
-  local f
-  for f in "${TMP_FILES[@]:-}"; do
-    [[ -f "$f" ]] && rm -f "$f"
-  done
-}
 
-TMP_FILES=()
-trap trap_cleanup EXIT
+def build_ir_args(args: list[str]) -> list[str]:
+    out: list[str] = []
+    skip_next = False
+    for a in args:
+        if skip_next:
+            skip_next = False
+            continue
 
-for src in "${SOURCE_FILES[@]}"; do
-  tmp_ll="$(mktemp "/tmp/secure-clang-XXXXXX.ll")"
-  TMP_FILES+=("$tmp_ll")
+        if a == "-o":
+            skip_next = True
+            continue
 
-  IR_ARGS=()
-  skip_next=0
-  for a in "${COMPILER_ARGS[@]}"; do
-    if [[ "$skip_next" -eq 1 ]]; then
-      skip_next=0
-      continue
-    fi
+        if a in {"-c", "-S", "-emit-llvm"}:
+            continue
 
-    if [[ "$a" == "-o" ]]; then
-      skip_next=1
-      continue
-    fi
+        if a.endswith(".c"):
+            continue
 
-    if [[ "$a" == "-c" || "$a" == "-S" || "$a" == "-emit-llvm" ]]; then
-      continue
-    fi
+        out.append(a)
+    return out
 
-    if [[ "$a" == *.c ]]; then
-      continue
-    fi
 
-    IR_ARGS+=("$a")
-  done
+def run_with_optional_energy(cmd: list[str], cwd: Path, phase: str) -> tuple[int, float, float]:
+    energy_kwh = 0.0
+    emissions_kg = 0.0
 
-  "$CLANG_EXE" "${IR_ARGS[@]}" -S -emit-llvm -Xclang -disable-O0-optnone "$src" -o "$tmp_ll"
-  "$OPT_EXE" -load-pass-plugin "$PLUGIN_RESOLVED" -passes=traversal-pass -disable-output "$tmp_ll"
-done
+    try:
+        from codecarbon import EmissionsTracker  # type: ignore
+    except Exception:
+        proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+        if proc.stdout:
+            sys.stdout.write(proc.stdout)
+        if proc.stderr:
+            sys.stderr.write(proc.stderr)
+        return proc.returncode, energy_kwh, emissions_kg
 
-exec "$CLANG_EXE" "${COMPILER_ARGS[@]}"
+    with tempfile.TemporaryDirectory(prefix="codecarbon-") as td:
+        tracker = EmissionsTracker(
+            project_name="secure-clang",
+            output_dir=td,
+            save_to_file=True,
+            save_to_api=False,
+            log_level="error",
+        )
+        tracker.start()
+        proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+        emissions = tracker.stop()
+
+        if proc.stdout:
+            sys.stdout.write(proc.stdout)
+        if proc.stderr:
+            sys.stderr.write(proc.stderr)
+
+        if emissions is not None:
+            emissions_kg = float(emissions)
+
+        csv_path = Path(td) / "emissions.csv"
+        if csv_path.exists():
+            with csv_path.open("r", encoding="utf-8", newline="") as fh:
+                rows = list(csv.DictReader(fh))
+                if rows:
+                    last = rows[-1]
+                    try:
+                        energy_kwh = float(last.get("energy_consumed", "0") or 0.0)
+                    except ValueError:
+                        energy_kwh = 0.0
+
+    sys.stderr.write(
+        f"[CodeCarbon] phase={phase} energy_kwh={energy_kwh:.8f} emissions_kg={emissions_kg:.8f}\n"
+    )
+    return proc.returncode, energy_kwh, emissions_kg
+
+
+def main() -> int:
+    args = parse_args()
+    repo_root = Path(__file__).resolve().parent
+    plugin = resolve_plugin_path(args.plugin)
+    if not plugin:
+        sys.stderr.write("secure-clang: could not find plugin. Build it first or pass --plugin.\n")
+        return 2
+
+    source_files = get_source_files(args.compiler_args)
+    total_energy_kwh = 0.0
+    total_emissions_kg = 0.0
+
+    if not source_files:
+        sys.stderr.write("secure-clang: no C source input found; forwarding to clang.\n")
+        rc, e, m = run_with_optional_energy([args.clang, *args.compiler_args], repo_root, "clang-final")
+        total_energy_kwh += e
+        total_emissions_kg += m
+        sys.stderr.write(
+            f"[CodeCarbon] total energy_kwh={total_energy_kwh:.8f} emissions_kg={total_emissions_kg:.8f}\n"
+        )
+        return rc
+
+    tmp_files: list[Path] = []
+    try:
+        ir_args = build_ir_args(args.compiler_args)
+        for src in source_files:
+            fd, temp_path = tempfile.mkstemp(prefix="secure-clang-", suffix=".ll")
+            os.close(fd)
+            tmp_ll = Path(temp_path)
+            tmp_files.append(tmp_ll)
+
+            rc, e, m = run_with_optional_energy(
+                [
+                    args.clang,
+                    *ir_args,
+                    "-S",
+                    "-emit-llvm",
+                    "-Xclang",
+                    "-disable-O0-optnone",
+                    src,
+                    "-o",
+                    str(tmp_ll),
+                ],
+                repo_root,
+                "clang-ir",
+            )
+            total_energy_kwh += e
+            total_emissions_kg += m
+            if rc != 0:
+                sys.stderr.write(
+                    f"[CodeCarbon] total energy_kwh={total_energy_kwh:.8f} emissions_kg={total_emissions_kg:.8f}\n"
+                )
+                return rc
+
+            rc, e, m = run_with_optional_energy(
+                [
+                    args.opt,
+                    "-load-pass-plugin",
+                    plugin,
+                    "-passes=traversal-pass",
+                    "-disable-output",
+                    str(tmp_ll),
+                ],
+                repo_root,
+                "opt-policy",
+            )
+            total_energy_kwh += e
+            total_emissions_kg += m
+            if rc != 0:
+                sys.stderr.write(
+                    f"[CodeCarbon] total energy_kwh={total_energy_kwh:.8f} emissions_kg={total_emissions_kg:.8f}\n"
+                )
+                return rc
+
+        rc, e, m = run_with_optional_energy([args.clang, *args.compiler_args], repo_root, "clang-final")
+        total_energy_kwh += e
+        total_emissions_kg += m
+        sys.stderr.write(
+            f"[CodeCarbon] total energy_kwh={total_energy_kwh:.8f} emissions_kg={total_emissions_kg:.8f}\n"
+        )
+        return rc
+    finally:
+        for t in tmp_files:
+            t.unlink(missing_ok=True)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

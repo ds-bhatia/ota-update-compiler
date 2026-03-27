@@ -67,6 +67,7 @@ Behavior:
 - Runs the OTA security pass through opt.
 - If policy checks pass, forwards original arguments to clang.
 - If policy checks fail, compilation is blocked.
+- Prints CodeCarbon energy and emissions metrics per phase and total run.
 
 To use as a global command on Ubuntu:
 
@@ -128,6 +129,18 @@ Features:
 - Edit or paste your own firmware update code.
 - Run secure-clang from the UI.
 - View policy violations and line-level hints.
+- View phase-wise and total CodeCarbon energy metrics for each compile run.
+
+### CodeCarbon Notes
+
+secure-clang automatically uses CodeCarbon when available in the active Python environment.
+
+CLI output lines include:
+
+- [CodeCarbon] phase=... energy_kwh=... emissions_kg=...
+- [CodeCarbon] total energy_kwh=... emissions_kg=...
+
+If CodeCarbon is not installed, secure-clang still runs, but energy lines are not emitted.
 
 ## Week Status
 

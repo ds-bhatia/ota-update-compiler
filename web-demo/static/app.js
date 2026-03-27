@@ -6,6 +6,8 @@ const filenameInput = document.getElementById('filenameInput');
 const engineStatus = document.getElementById('engineStatus');
 const resultBadge = document.getElementById('resultBadge');
 const messageBox = document.getElementById('messageBox');
+const energyBox = document.getElementById('energyBox');
+const energyPhases = document.getElementById('energyPhases');
 const violationsList = document.getElementById('violationsList');
 const hintsList = document.getElementById('hintsList');
 const rawOutput = document.getElementById('rawOutput');
@@ -59,6 +61,23 @@ function setMessage(text, mode) {
   messageBox.textContent = text;
 }
 
+function renderEnergy(energy) {
+  if (!energy || !energy.available) {
+    energyBox.className = 'message neutral';
+    energyBox.textContent = 'CodeCarbon metrics unavailable. Ensure codecarbon is installed in the active Python environment.';
+    renderList(energyPhases, [], (x) => x);
+    return;
+  }
+
+  const total = energy.total || { energy_kwh: 0, emissions_kg: 0 };
+  energyBox.className = 'message good';
+  energyBox.textContent = `Total energy: ${Number(total.energy_kwh).toFixed(8)} kWh | Total emissions: ${Number(total.emissions_kg).toFixed(8)} kgCO2eq`;
+
+  renderList(energyPhases, energy.phases, (p) =>
+    `${p.phase} -> ${Number(p.energy_kwh).toFixed(8)} kWh, ${Number(p.emissions_kg).toFixed(8)} kgCO2eq`
+  );
+}
+
 function renderList(listEl, items, formatItem) {
   listEl.innerHTML = '';
   if (!items || items.length === 0) {
@@ -110,6 +129,7 @@ async function runCompile() {
       const col = h.column ? `:${h.column}` : '';
       return `L${h.line}${col} ${h.label}`;
     });
+    renderEnergy(data.energy);
     rawOutput.textContent = data.rawOutput || '(no output)';
   } catch (err) {
     setBadge('failed');

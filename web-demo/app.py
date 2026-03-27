@@ -72,6 +72,40 @@ def _extract_clang_syntax_hints(raw_output: str) -> list[dict[str, Any]]:
     return hints
 
 
+def _extract_energy_metrics(raw_output: str) -> dict[str, Any]:
+    phase_pattern = re.compile(
+        r"^\[CodeCarbon\]\s+phase=([a-zA-Z0-9_-]+)\s+energy_kwh=([0-9.eE+-]+)\s+emissions_kg=([0-9.eE+-]+)$"
+    )
+    total_pattern = re.compile(
+        r"^\[CodeCarbon\]\s+total\s+energy_kwh=([0-9.eE+-]+)\s+emissions_kg=([0-9.eE+-]+)$"
+    )
+
+    phases: list[dict[str, Any]] = []
+    total = {"energy_kwh": 0.0, "emissions_kg": 0.0}
+
+    for line in raw_output.splitlines():
+        candidate = line.strip()
+        m_phase = phase_pattern.match(candidate)
+        if m_phase:
+            phases.append(
+                {
+                    "phase": m_phase.group(1),
+                    "energy_kwh": float(m_phase.group(2)),
+                    "emissions_kg": float(m_phase.group(3)),
+                }
+            )
+            continue
+
+        m_total = total_pattern.match(candidate)
+        if m_total:
+            total = {
+                "energy_kwh": float(m_total.group(1)),
+                "emissions_kg": float(m_total.group(2)),
+            }
+
+    return {"phases": phases, "total": total, "available": bool(phases)}
+
+
 def run_secure_compile(source_code: str, filename: str) -> dict[str, Any]:
     if not SECURE_CLANG.exists():
         return {
@@ -113,6 +147,7 @@ def run_secure_compile(source_code: str, filename: str) -> dict[str, Any]:
 
         hints = _find_line_hints(source_code, violations)
         hints.extend(_extract_clang_syntax_hints(raw_output))
+        energy = _extract_energy_metrics(raw_output)
 
         if proc.returncode == 0:
             return {
@@ -122,6 +157,7 @@ def run_secure_compile(source_code: str, filename: str) -> dict[str, Any]:
                 "rawOutput": raw_output.strip(),
                 "violations": [],
                 "hints": hints,
+                "energy": energy,
             }
 
         status = "failed"
@@ -135,6 +171,7 @@ def run_secure_compile(source_code: str, filename: str) -> dict[str, Any]:
             "rawOutput": raw_output.strip(),
             "violations": violations,
             "hints": hints,
+            "energy": energy,
         }
 
 
