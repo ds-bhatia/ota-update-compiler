@@ -15,9 +15,11 @@ const historyList = document.getElementById('historyList');
 const historyChart = document.getElementById('historyChart');
 const exportJsonBtn = document.getElementById('exportJsonBtn');
 const exportMdBtn = document.getElementById('exportMdBtn');
+const themeToggle = document.getElementById('themeToggle');
 
 const runHistory = [];
 let lastCompilePayload = null;
+const THEME_KEY = 'ota-demo-theme';
 
 const demoScenarios = [
   { label: 'Secure Baseline', sample: 'secure.c', expected: 'pass' },
@@ -91,6 +93,31 @@ function setMessage(text, mode) {
   messageBox.textContent = text;
 }
 
+function getInitialTheme() {
+  const stored = localStorage.getItem(THEME_KEY);
+  if (stored === 'dark' || stored === 'light') {
+    return stored;
+  }
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+    return 'light';
+  }
+  return 'dark';
+}
+
+function applyTheme(theme) {
+  document.body.setAttribute('data-theme', theme);
+  localStorage.setItem(THEME_KEY, theme);
+  if (themeToggle) {
+    themeToggle.textContent = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+  }
+  drawHistoryChart();
+}
+
+function toggleTheme() {
+  const current = document.body.getAttribute('data-theme') || 'dark';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+
 function renderEnergy(energy) {
   if (!energy || !energy.available) {
     energyBox.className = 'message neutral';
@@ -152,9 +179,13 @@ function drawHistoryChart() {
 
   const width = canvas.width;
   const height = canvas.height;
+  const styles = getComputedStyle(document.body);
+  const axisColor = styles.getPropertyValue('--line').trim() || '#314139';
+  const labelColor = styles.getPropertyValue('--muted').trim() || '#95a79a';
+  const barColor = styles.getPropertyValue('--accent').trim() || '#f4b860';
   ctx.clearRect(0, 0, width, height);
 
-  ctx.strokeStyle = '#314139';
+  ctx.strokeStyle = axisColor;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(30, 12);
@@ -163,7 +194,7 @@ function drawHistoryChart() {
   ctx.stroke();
 
   if (runHistory.length === 0) {
-    ctx.fillStyle = '#95a79a';
+    ctx.fillStyle = labelColor;
     ctx.font = '12px IBM Plex Mono';
     ctx.fillText('No runs yet', 40, 30);
     return;
@@ -179,11 +210,11 @@ function drawHistoryChart() {
     const x = 32 + i * barW + 3;
     const h = (v / max) * (chartH - 8);
     const y = height - 24 - h;
-    ctx.fillStyle = '#f4b860';
+    ctx.fillStyle = barColor;
     ctx.fillRect(x, y, Math.max(4, barW - 6), h);
   });
 
-  ctx.fillStyle = '#95a79a';
+  ctx.fillStyle = labelColor;
   ctx.font = '11px IBM Plex Mono';
   ctx.fillText(`max ${max.toExponential(2)} kWh`, 36, 24);
 }
@@ -300,8 +331,12 @@ loadSampleBtn.addEventListener('click', loadSample);
 compileBtn.addEventListener('click', runCompile);
 exportJsonBtn.addEventListener('click', exportJsonReport);
 exportMdBtn.addEventListener('click', exportMarkdownReport);
+if (themeToggle) {
+  themeToggle.addEventListener('click', toggleTheme);
+}
 
 (async function init() {
+  applyTheme(getInitialTheme());
   await fetchSamples();
   renderDemoButtons();
   await loadSample();
