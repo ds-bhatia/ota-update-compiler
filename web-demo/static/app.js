@@ -16,6 +16,7 @@ const historyChart = document.getElementById('historyChart');
 const exportJsonBtn = document.getElementById('exportJsonBtn');
 const exportMdBtn = document.getElementById('exportMdBtn');
 const themeToggle = document.getElementById('themeToggle');
+const themeGlyph = document.getElementById('themeGlyph');
 
 const runHistory = [];
 let lastCompilePayload = null;
@@ -108,7 +109,12 @@ function applyTheme(theme) {
   document.body.setAttribute('data-theme', theme);
   localStorage.setItem(THEME_KEY, theme);
   if (themeToggle) {
-    themeToggle.textContent = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    themeToggle.setAttribute('aria-label', `Switch to ${nextTheme} mode`);
+    themeToggle.setAttribute('title', `Switch to ${nextTheme} mode`);
+  }
+  if (themeGlyph) {
+    themeGlyph.className = `theme-glyph ${theme === 'dark' ? 'moon' : 'sun'}`;
   }
   drawHistoryChart();
 }

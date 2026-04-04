@@ -16,7 +16,10 @@
       <h1>Secure OTA Update Compiler</h1>
       <p class="sub">Load firmware logic, run secure-clang, and inspect policy failures instantly.</p>
     </div>
-    <button id="themeToggle" class="btn secondary theme-toggle" type="button">Switch to light mode</button>
+    <button id="themeToggle" class="btn secondary theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">
+      <span id="themeGlyph" class="theme-glyph moon" aria-hidden="true"></span>
+      <span class="sr-only">Toggle color theme</span>
+    </button>
   </header>
 
   <section class="demo-mode panel">
