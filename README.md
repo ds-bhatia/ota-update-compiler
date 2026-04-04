@@ -145,11 +145,3 @@ CLI output lines include:
 
 If CodeCarbon is not installed, secure-clang still runs, but energy lines are not emitted.
 
-## Week Status
-
-- Week 1: completed (core policy enforcement)
-- Week 2: completed (realistic secure/insecure firmware samples)
-- Week 3: completed (focused violation matrix)
-- Week 4: completed (path-gated rollback precision + better diagnostics)
-- Week 5: completed (build and demo packaging)
-- Week 6: pending (final validation report)
