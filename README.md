@@ -130,6 +130,9 @@ Features:
 - Run secure-clang from the UI.
 - View policy violations and line-level hints.
 - View phase-wise and total CodeCarbon energy metrics for each compile run.
+- Use Demo Mode one-click scenarios for live presentation.
+- Track run history with recent compile outcomes and energy trend chart.
+- Export run reports as JSON and Markdown directly from the UI.
 
 ### CodeCarbon Notes
 

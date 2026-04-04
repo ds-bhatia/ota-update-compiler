@@ -19,6 +19,14 @@
     <div class="status-pill" id="engineStatus">Engine: ready</div>
   </header>
 
+  <section class="demo-mode panel">
+    <div class="panel-header">
+      <h2>Demo Mode</h2>
+      <span class="demo-note">One-click scenarios for live presentation</span>
+    </div>
+    <div id="demoButtons" class="demo-buttons"></div>
+  </section>
+
   <main class="layout">
     <section class="panel editor-panel">
       <div class="panel-header">
@@ -58,6 +66,14 @@
 
       <h3>Raw Output</h3>
       <pre id="rawOutput"></pre>
+
+      <h3>Run History</h3>
+      <div class="history-controls">
+        <button id="exportJsonBtn" class="btn secondary">Export JSON</button>
+        <button id="exportMdBtn" class="btn secondary">Export Markdown</button>
+      </div>
+      <canvas id="historyChart" width="640" height="180"></canvas>
+      <ul id="historyList" class="stack-list"></ul>
     </section>
   </main>
 

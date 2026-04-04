@@ -1,6 +1,7 @@
 const sampleSelect = document.getElementById('sampleSelect');
 const loadSampleBtn = document.getElementById('loadSampleBtn');
 const compileBtn = document.getElementById('compileBtn');
+const demoButtons = document.getElementById('demoButtons');
 const codeInput = document.getElementById('codeInput');
 const filenameInput = document.getElementById('filenameInput');
 const engineStatus = document.getElementById('engineStatus');
@@ -11,6 +12,36 @@ const energyPhases = document.getElementById('energyPhases');
 const violationsList = document.getElementById('violationsList');
 const hintsList = document.getElementById('hintsList');
 const rawOutput = document.getElementById('rawOutput');
+const historyList = document.getElementById('historyList');
+const historyChart = document.getElementById('historyChart');
+const exportJsonBtn = document.getElementById('exportJsonBtn');
+const exportMdBtn = document.getElementById('exportMdBtn');
+
+const runHistory = [];
+let lastCompilePayload = null;
+
+const demoScenarios = [
+  { label: 'Secure Baseline', sample: 'secure.c', expected: 'pass' },
+  { label: 'Signature Missing', sample: 'insecure_rule_signature_missing.c', expected: 'fail' },
+  { label: 'Rollback Violation', sample: 'insecure_rule_rollback_missing.c', expected: 'fail' },
+  { label: 'Weak Crypto', sample: 'insecure_rule_weak_md5.c', expected: 'fail' },
+  { label: 'Logging Leak', sample: 'insecure_rule_logging_puts.c', expected: 'fail' },
+];
+
+function renderDemoButtons() {
+  demoButtons.innerHTML = '';
+  for (const s of demoScenarios) {
+    const btn = document.createElement('button');
+    btn.className = 'demo-btn';
+    btn.type = 'button';
+    btn.innerHTML = `${s.label}<em>${s.expected.toUpperCase()}</em>`;
+    btn.addEventListener('click', async () => {
+      sampleSelect.value = s.sample;
+      await loadSample();
+    });
+    demoButtons.appendChild(btn);
+  }
+}
 
 async function fetchSamples() {
   const res = await fetch('/api/samples');
@@ -94,6 +125,120 @@ function renderList(listEl, items, formatItem) {
   }
 }
 
+function formatTimestamp(ts) {
+  const d = new Date(ts);
+  return d.toLocaleString();
+}
+
+function addHistoryEntry(entry) {
+  runHistory.unshift(entry);
+  if (runHistory.length > 20) {
+    runHistory.pop();
+  }
+  renderHistory();
+}
+
+function renderHistory() {
+  renderList(historyList, runHistory, (r) => {
+    return `${formatTimestamp(r.timestamp)} | ${r.filename} | ${r.status.toUpperCase()} | violations=${r.violations} | energy=${r.energyKwh.toFixed(8)} kWh`;
+  });
+  drawHistoryChart();
+}
+
+function drawHistoryChart() {
+  const canvas = historyChart;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0, 0, width, height);
+
+  ctx.strokeStyle = '#314139';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(30, 12);
+  ctx.lineTo(30, height - 24);
+  ctx.lineTo(width - 8, height - 24);
+  ctx.stroke();
+
+  if (runHistory.length === 0) {
+    ctx.fillStyle = '#95a79a';
+    ctx.font = '12px IBM Plex Mono';
+    ctx.fillText('No runs yet', 40, 30);
+    return;
+  }
+
+  const values = runHistory.slice(0, 10).map((r) => r.energyKwh);
+  const max = Math.max(...values, 0.000001);
+  const chartW = width - 46;
+  const chartH = height - 42;
+  const barW = chartW / values.length;
+
+  values.forEach((v, i) => {
+    const x = 32 + i * barW + 3;
+    const h = (v / max) * (chartH - 8);
+    const y = height - 24 - h;
+    ctx.fillStyle = '#f4b860';
+    ctx.fillRect(x, y, Math.max(4, barW - 6), h);
+  });
+
+  ctx.fillStyle = '#95a79a';
+  ctx.font = '11px IBM Plex Mono';
+  ctx.fillText(`max ${max.toExponential(2)} kWh`, 36, 24);
+}
+
+function downloadBlob(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportJsonReport() {
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    lastRun: lastCompilePayload,
+    history: runHistory,
+  };
+  downloadBlob(JSON.stringify(payload, null, 2), 'secure-compiler-report.json', 'application/json');
+}
+
+function exportMarkdownReport() {
+  const lines = [];
+  lines.push('# Secure OTA Compiler Run Report');
+  lines.push('');
+  lines.push(`Generated: ${new Date().toISOString()}`);
+  lines.push('');
+
+  if (lastCompilePayload) {
+    lines.push('## Latest Run');
+    lines.push('');
+    lines.push(`- Status: ${lastCompilePayload.status}`);
+    lines.push(`- File: ${lastCompilePayload.filename}`);
+    lines.push(`- Violations: ${lastCompilePayload.violations}`);
+    lines.push(`- Energy (kWh): ${lastCompilePayload.energyKwh.toFixed(8)}`);
+    lines.push(`- Emissions (kgCO2eq): ${lastCompilePayload.emissionsKg.toFixed(8)}`);
+    lines.push('');
+  }
+
+  lines.push('## Run History');
+  lines.push('');
+  lines.push('| Time | File | Status | Violations | Energy (kWh) |');
+  lines.push('|---|---|---|---:|---:|');
+  for (const r of runHistory) {
+    lines.push(`| ${formatTimestamp(r.timestamp)} | ${r.filename} | ${r.status.toUpperCase()} | ${r.violations} | ${r.energyKwh.toFixed(8)} |`);
+  }
+
+  downloadBlob(lines.join('\n'), 'secure-compiler-report.md', 'text/markdown');
+}
+
 async function runCompile() {
   compileBtn.disabled = true;
   compileBtn.textContent = 'Compiling...';
@@ -131,6 +276,19 @@ async function runCompile() {
     });
     renderEnergy(data.energy);
     rawOutput.textContent = data.rawOutput || '(no output)';
+
+    const totalEnergy = data.energy?.total?.energy_kwh || 0;
+    const totalEmissions = data.energy?.total?.emissions_kg || 0;
+    const historyEntry = {
+      timestamp: Date.now(),
+      filename: filenameInput.value.trim() || 'firmware_demo.c',
+      status: data.ok ? 'pass' : 'fail',
+      violations: (data.violations || []).length,
+      energyKwh: Number(totalEnergy),
+      emissionsKg: Number(totalEmissions),
+    };
+    lastCompilePayload = historyEntry;
+    addHistoryEntry(historyEntry);
   } catch (err) {
     setBadge('failed');
     setMessage(`Unexpected error: ${err.message}`, 'bad');
@@ -143,8 +301,12 @@ async function runCompile() {
 
 loadSampleBtn.addEventListener('click', loadSample);
 compileBtn.addEventListener('click', runCompile);
+exportJsonBtn.addEventListener('click', exportJsonReport);
+exportMdBtn.addEventListener('click', exportMarkdownReport);
 
 (async function init() {
   await fetchSamples();
+  renderDemoButtons();
   await loadSample();
+  renderHistory();
 })();
