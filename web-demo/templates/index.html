@@ -16,13 +16,11 @@
       <h1>Secure OTA Update Compiler</h1>
       <p class="sub">Load firmware logic, run secure-clang, and inspect policy failures instantly.</p>
     </div>
-    <div class="status-pill" id="engineStatus">Engine: ready</div>
   </header>
 
   <section class="demo-mode panel">
     <div class="panel-header">
       <h2>Demo Mode</h2>
-      <span class="demo-note">One-click scenarios for live presentation</span>
     </div>
     <div id="demoButtons" class="demo-buttons"></div>
   </section>
@@ -56,6 +54,11 @@
 
       <h3>Energy Usage</h3>
       <div id="energyBox" class="message neutral">CodeCarbon metrics appear after compilation.</div>
+      <div class="energy-help">
+        <p><strong>How to interpret:</strong> values are per compile run. Lower is better.</p>
+        <p>Energy (kWh): &lt; 0.00001 very low, 0.00001-0.0001 low, 0.0001-0.001 moderate, &gt; 0.001 high.</p>
+        <p>Emissions (kgCO2eq): direct estimate from measured energy and regional carbon intensity.</p>
+      </div>
       <ul id="energyPhases" class="stack-list"></ul>
 
       <h3>Violations</h3>

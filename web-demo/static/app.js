@@ -4,7 +4,6 @@ const compileBtn = document.getElementById('compileBtn');
 const demoButtons = document.getElementById('demoButtons');
 const codeInput = document.getElementById('codeInput');
 const filenameInput = document.getElementById('filenameInput');
-const engineStatus = document.getElementById('engineStatus');
 const resultBadge = document.getElementById('resultBadge');
 const messageBox = document.getElementById('messageBox');
 const energyBox = document.getElementById('energyBox');
@@ -242,7 +241,6 @@ function exportMarkdownReport() {
 async function runCompile() {
   compileBtn.disabled = true;
   compileBtn.textContent = 'Compiling...';
-  engineStatus.textContent = 'Engine: compiling';
 
   try {
     const res = await fetch('/api/compile', {
@@ -295,7 +293,6 @@ async function runCompile() {
   } finally {
     compileBtn.disabled = false;
     compileBtn.textContent = 'Run secure-clang';
-    engineStatus.textContent = 'Engine: ready';
   }
 }
 
