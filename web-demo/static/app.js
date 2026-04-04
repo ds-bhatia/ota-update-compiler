@@ -114,7 +114,7 @@ function applyTheme(theme) {
     themeToggle.setAttribute('title', `Switch to ${nextTheme} mode`);
   }
   if (themeGlyph) {
-    themeGlyph.className = `theme-glyph ${theme === 'dark' ? 'moon' : 'sun'}`;
+    themeGlyph.className = `theme-glyph ${theme === 'dark' ? 'sun' : 'moon'}`;
   }
   drawHistoryChart();
 }
