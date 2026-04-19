@@ -10,79 +10,106 @@
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-  <div class="bg-grid"></div>
-  <header class="topbar">
-    <div>
-      <h1>Secure OTA Update Compiler</h1>
-      <p class="sub">Load firmware logic, run secure-clang, and inspect policy failures instantly.</p>
-    </div>
-    <button id="themeToggle" class="btn secondary theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">
-      <span id="themeGlyph" class="theme-glyph moon" aria-hidden="true"></span>
-      <span class="sr-only">Toggle color theme</span>
-    </button>
-  </header>
+  <div class="bg-orb bg-orb-a"></div>
+  <div class="bg-orb bg-orb-b"></div>
 
-  <section class="demo-mode panel">
-    <div class="panel-header">
-      <h2>Demo Mode</h2>
-    </div>
-    <div id="demoButtons" class="demo-buttons"></div>
-  </section>
+  <div class="app-shell">
+    <aside class="control-rail panel">
+      <div class="rail-head">
+        <p class="eyebrow">Compiler Sandbox</p>
+        <h1>Secure OTA Update Compiler</h1>
+        <p class="sub">Policy-driven firmware validation with live diagnostics and sustainability telemetry.</p>
+      </div>
 
-  <main class="layout">
-    <section class="panel editor-panel">
-      <div class="panel-header">
-        <h2>Firmware Source</h2>
-        <div class="toolbar">
+      <div class="rail-block">
+        <div class="rail-title-row">
+          <h2>Theme</h2>
+          <button id="themeToggle" class="btn secondary theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">
+            <span id="themeGlyph" class="theme-glyph moon" aria-hidden="true"></span>
+            <span class="sr-only">Toggle color theme</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="rail-block">
+        <h2>Demo Mode</h2>
+        <div id="demoButtons" class="demo-buttons"></div>
+      </div>
+
+      <div class="rail-block">
+        <h2>Input Setup</h2>
+        <div class="control-stack">
           <select id="sampleSelect"></select>
           <button id="loadSampleBtn" class="btn secondary">Load sample</button>
+          <label class="filename-row">
+            File name
+            <input id="filenameInput" value="firmware_demo.c" />
+          </label>
           <button id="compileBtn" class="btn primary">Run secure-clang</button>
         </div>
       </div>
-      <label class="filename-row">
-        File name
-        <input id="filenameInput" value="firmware_demo.c" />
-      </label>
-      <div class="editor-wrap">
-        <textarea id="codeInput" spellcheck="false"></textarea>
-      </div>
-    </section>
+    </aside>
 
-    <section class="panel output-panel">
-      <div class="panel-header">
-        <h2>Compiler Output</h2>
-        <span id="resultBadge" class="badge idle">Idle</span>
-      </div>
+    <main class="workspace-grid">
+      <section class="panel stage-panel">
+        <div class="panel-header">
+          <h2>Firmware Source Editor</h2>
+        </div>
+        <div class="editor-wrap">
+          <textarea id="codeInput" spellcheck="false"></textarea>
+        </div>
+      </section>
 
-      <div id="messageBox" class="message neutral">Run compilation to see results.</div>
+      <section class="panel output-panel">
+        <div class="panel-header">
+          <h2>Compile Results</h2>
+          <span id="resultBadge" class="badge idle">Idle</span>
+        </div>
 
-      <h3>Energy Usage</h3>
-      <div id="energyBox" class="message neutral">CodeCarbon metrics appear after compilation.</div>
-      <div class="energy-help">
-        <p><strong>How to interpret:</strong> values are per compile run. Lower is better.</p>
-        <p>Energy (kWh): &lt; 0.00001 very low, 0.00001-0.0001 low, 0.0001-0.001 moderate, &gt; 0.001 high.</p>
-        <p>Emissions (kgCO2eq): direct estimate from measured energy and regional carbon intensity.</p>
-      </div>
-      <ul id="energyPhases" class="stack-list"></ul>
+        <div id="messageBox" class="message neutral">Run compilation to see results.</div>
 
-      <h3>Violations</h3>
-      <ul id="violationsList" class="stack-list"></ul>
+        <div class="result-grid">
+          <section class="metric-card">
+            <h3>Energy Usage</h3>
+            <div id="energyBox" class="message neutral">CodeCarbon metrics appear after compilation.</div>
+            <div class="energy-help">
+              <p><strong>How to interpret:</strong> values are per compile run. Lower is better.</p>
+              <p>Energy (kWh): &lt; 0.00001 very low, 0.00001-0.0001 low, 0.0001-0.001 moderate, &gt; 0.001 high.</p>
+              <p>Emissions (kgCO2eq): direct estimate from measured energy and regional carbon intensity.</p>
+            </div>
+            <ul id="energyPhases" class="stack-list"></ul>
+          </section>
 
-      <h3>Line Hints</h3>
-      <ul id="hintsList" class="stack-list"></ul>
+          <section class="metric-card">
+            <h3>Violations</h3>
+            <ul id="violationsList" class="stack-list"></ul>
+          </section>
 
-      <h3>Raw Output</h3>
-      <pre id="rawOutput"></pre>
+          <section class="metric-card">
+            <h3>Line Hints</h3>
+            <ul id="hintsList" class="stack-list"></ul>
+          </section>
 
-      <h3>Run History</h3>
-      <div class="history-controls">
-        <button id="exportJsonBtn" class="btn secondary">Export JSON</button>
-        <button id="exportMdBtn" class="btn secondary">Export Markdown</button>
-      </div>
-      <canvas id="historyChart" width="640" height="180"></canvas>
-      <ul id="historyList" class="stack-list"></ul>
-    </section>
-  </main>
+          <section class="metric-card full-width">
+            <h3>Raw Output</h3>
+            <pre id="rawOutput"></pre>
+          </section>
+
+          <section class="metric-card full-width">
+            <div class="history-head">
+              <h3>Run History</h3>
+              <div class="history-controls">
+                <button id="exportJsonBtn" class="btn secondary">Export JSON</button>
+                <button id="exportMdBtn" class="btn secondary">Export Markdown</button>
+              </div>
+            </div>
+            <canvas id="historyChart" width="640" height="180"></canvas>
+            <ul id="historyList" class="stack-list"></ul>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <script src="/static/app.js"></script>
 </body>
